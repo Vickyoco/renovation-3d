@@ -20,4 +20,6 @@ Upload room photos, reconstruct a 3D scene entirely in the browser, preview mate
 
 ## Status
 
-Project scaffold. The repository was created on 2026-11-20; implementation follows the workflow above step by step.
+Initial code is in: `index.html` is the entry page (Three.js scene with orbit controls, floor-material and wall-colour pickers, furniture toggles, live measurements), and `room-model.js` builds the procedural 3D room model (5.2 m x 4.2 m x 2.8 m room with window, door and a basic furniture set) and exposes material/furniture/measurement APIs for the later workflow steps.
+
+To view it, serve the repository folder with any static file server (for example `npx serve .`) and open index.html — it loads Three.js from a CDN, so it needs an internet connection.
