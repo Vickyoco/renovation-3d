@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>renovation-3d — 3D room model preview</title>
+<style>
+  html, body { margin: 0; height: 100%; font-family: system-ui, sans-serif; }
+  #app { display: flex; height: 100%; }
+  #scene { flex: 1; min-width: 0; }
+  #panel { width: 260px; padding: 16px; background: #f6f3ec; border-left: 1px solid #ddd; overflow-y: auto; }
+  #panel h1 { font-size: 17px; margin: 0 0 4px; }
+  #panel h2 { font-size: 13px; margin: 18px 0 6px; text-transform: uppercase; letter-spacing: .04em; color: #666; }
+  #panel label { display: block; font-size: 14px; margin: 6px 0; }
+  #panel select, #panel input[type="color"] { width: 100%; margin-top: 4px; }
+  #panel .hint { font-size: 12px; color: #777; }
+  #measures { font-size: 13px; line-height: 1.7; background: #fff; border: 1px solid #e2ddd0; border-radius: 6px; padding: 8px 10px; }
+  canvas { display: block; }
+</style>
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+</head>
+<body>
+<div id="app">
+  <div id="scene"></div>
+  <aside id="panel">
+    <h1>renovation-3d</h1>
+    <p class="hint">Procedural 3D room model (5.2 m x 4.2 m x 2.8 m). Drag to orbit, scroll to zoom. This is step 2-3 of the workflow: scene preview with materials &amp; furniture.</p>
+
+    <h2>Floor material</h2>
+    <select id="floorMat">
+      <option value="wood">Wood laminate</option>
+      <option value="marble">Polished marble</option>
+      <option value="tile">Ceramic tile</option>
+      <option value="concrete">Polished concrete</option>
+    </select>
+
+    <h2>Wall colour</h2>
+    <input type="color" id="wallColor" value="#f0ead9">
+
+    <h2>Furniture</h2>
+    <div id="furnitureList"></div>
+
+    <h2>Measurements</h2>
+    <div id="measures"></div>
+  </aside>
+</div>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { buildRoom } from './room-model.js';
+
+const container = document.getElementById('scene');
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+container.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0xe9edf2);
+
+const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 100);
+camera.position.set(5.4, 4.2, 6.2);
+
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.target.set(0, 0.8, 0);
+controls.enableDamping = true;
+controls.maxPolarAngle = Math.PI / 2.02;
+
+scene.add(new THREE.AmbientLight(0xffffff, 0.55));
+const sun = new THREE.DirectionalLight(0xfff2dd, 1.6);
+sun.position.set(4, 6, 3);
+sun.castShadow = true;
+sun.shadow.mapSize.set(2048, 2048);
+scene.add(sun);
+
+const room = buildRoom(scene);
+
+// Panel wiring
+document.getElementById('floorMat').addEventListener('change', (e) => room.setFloorMaterial(e.target.value));
+document.getElementById('wallColor').addEventListener('input', (e) => room.setWallColor(e.target.value));
+
+const labels = { sofa: 'Sofa', rug: 'Rug', coffeeTable: 'Coffee table', tv: 'TV + stand', lamp: 'Floor lamp', cabinet: 'Cabinet run' };
+const list = document.getElementById('furnitureList');
+for (const name of Object.keys(room.furniture)) {
+  const label = document.createElement('label');
+  const cb = document.createElement('input');
+  cb.type = 'checkbox'; cb.checked = true;
+  cb.addEventListener('change', () => room.setFurnitureVisible(name, cb.checked));
+  label.append(cb, ' ' + (labels[name] || name));
+  list.appendChild(label);
+}
+
+const m = room.measurements();
+document.getElementById('measures').innerHTML =
+  'Floor area: <b>' + m.floorArea + ' m2</b><br>' +
+  'Wall area: <b>' + m.wallArea + ' m2</b><br>' +
+  'Ceiling area: <b>' + m.ceilingArea + ' m2</b><br>' +
+  'Skirting length: <b>' + m.skirtingLength + ' m</b>';
+
+function resize() {
+  const w = container.clientWidth, h = container.clientHeight;
+  renderer.setSize(w, h);
+  camera.aspect = w / h;
+  camera.updateProjectionMatrix();
+}
+addEventListener('resize', resize);
+resize();
+
+renderer.setAnimationLoop(() => {
+  controls.update();
+  renderer.render(scene, camera);
+});
+</script>
+</body>
+</html>
